@@ -6,7 +6,7 @@
 void process_instruction()
 {
     uint32_t instruction = mem_read_32(CURRENT_STATE.PC);
-    uint32_t opcode = (instruction >> 21) & 0x7FF;  // Bits <31:21>
+    uint32_t opcode = (instruction >> 21) & 0x7FF;
 
     switch (opcode) {
         case 0x6A2:  // HLT
@@ -14,9 +14,9 @@ void process_instruction()
             break;
 
         case 0x558: {  // ADDS Register
-            uint32_t Rd = instruction & 0x1F;  // Bits <4:0>
-            uint32_t Rn = (instruction >> 5) & 0x1F;  // Bits <9:5>
-            uint32_t Rm = (instruction >> 16) & 0x1F;  // Bits <20:16>
+            uint32_t Rd = instruction & 0x1F;
+            uint32_t Rn = (instruction >> 5) & 0x1F; 
+            uint32_t Rm = (instruction >> 16) & 0x1F; 
 
             int64_t reg_Xn = (Rn == 31) ? 0 : CURRENT_STATE.REGS[Rn];  // Manejo de XZR
             int64_t reg_Xm = (Rm == 31) ? 0 : CURRENT_STATE.REGS[Rm];
@@ -30,9 +30,9 @@ void process_instruction()
         }
 
         case 0x758: {  // SUBS Register
-            uint32_t Rd = instruction & 0x1F;           // Bits <4:0>
-            uint32_t Rn = (instruction >> 5) & 0x1F;    // Bits <9:5>
-            uint32_t Rm = (instruction >> 16) & 0x1F;   // Bits <20:16>
+            uint32_t Rd = instruction & 0x1F; 
+            uint32_t Rn = (instruction >> 5) & 0x1F;  
+            uint32_t Rm = (instruction >> 16) & 0x1F;   
         
             // Manejar el registro XZR (X31)
             int64_t reg_Xn = (Rn == 31) ? 0 : CURRENT_STATE.REGS[Rn];
@@ -54,7 +54,7 @@ void process_instruction()
             uint32_t imm12 = (instruction >> 10) & 0xFFF;
 
             int64_t reg_Xn = (Rn == 31) ? 0 : CURRENT_STATE.REGS[Rn];
-            int64_t imm = imm12;  // No hay shift en este TP
+            int64_t imm = imm12;
             int64_t result = reg_Xn + imm;
 
             NEXT_STATE.REGS[Rd] = (Rd == 31) ? 0 : result;
@@ -70,7 +70,7 @@ void process_instruction()
             uint32_t imm12 = (instruction >> 10) & 0xFFF;
 
             int64_t reg_Xn = (Rn == 31) ? 0 : CURRENT_STATE.REGS[Rn];
-            int64_t imm = imm12;  // No hay shift en este TP
+            int64_t imm = imm12; 
             int64_t result = reg_Xn - imm;
 
             NEXT_STATE.REGS[Rd] = (Rd == 31) ? 0 : result;
