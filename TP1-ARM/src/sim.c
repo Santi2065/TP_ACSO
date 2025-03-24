@@ -64,21 +64,21 @@ void process_instruction()
             break;
         }
 
-        // case 0x758: {  // SUBS Immediate
-        //     uint32_t Rd = instruction & 0x1F;
-        //     uint32_t Rn = (instruction >> 5) & 0x1F;
-        //     uint32_t imm12 = (instruction >> 10) & 0xFFF;
+        case 0x788: {  // SUBS Immediate
+            uint32_t Rd = instruction & 0x1F;
+            uint32_t Rn = (instruction >> 5) & 0x1F;
+            uint32_t imm12 = (instruction >> 10) & 0xFFF;
 
-        //     int64_t reg_Xn = (Rn == 31) ? 0 : CURRENT_STATE.REGS[Rn];
-        //     int64_t imm = imm12;  // No hay shift en este TP
-        //     int64_t result = reg_Xn - imm;
+            int64_t reg_Xn = (Rn == 31) ? 0 : CURRENT_STATE.REGS[Rn];
+            int64_t imm = imm12;  // No hay shift en este TP
+            int64_t result = reg_Xn - imm;
 
-        //     NEXT_STATE.REGS[Rd] = (Rd == 31) ? 0 : result;
+            NEXT_STATE.REGS[Rd] = (Rd == 31) ? 0 : result;
 
-        //     NEXT_STATE.FLAG_Z = (result == 0) ? 1 : 0;
-        //     NEXT_STATE.FLAG_N = (result < 0) ? 1 : 0;
-        //     break;
-        // }
+            NEXT_STATE.FLAG_Z = (result == 0) ? 1 : 0;
+            NEXT_STATE.FLAG_N = (result < 0) ? 1 : 0;
+            break;
+        }
 
         default:
             printf("Instrucción desconocida: %x\n", opcode);
