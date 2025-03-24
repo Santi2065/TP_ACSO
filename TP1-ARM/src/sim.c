@@ -8,4 +8,7 @@ void process_instruction()
      * values in NEXT_STATE. You can call mem_read_32() and mem_write_32() to
      * access memory. 
      * */
+    if (CURRENT_STATE.PC == 0xd4400000){
+        return;
+     }
 }
