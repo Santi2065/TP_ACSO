@@ -11,10 +11,11 @@ void process_instruction()
     
     printf("PC: 0x%016lX | Instruction: 0x%08X | Opcode: 0x%X\n", 
        (unsigned long) CURRENT_STATE.PC, instruction, opcode);
+    printf("Instrucción: 0x%08X, opcode_high: 0x%X, primeros 8 bits: 0x%X\n", 
+       instruction, opcode_high, instruction >> 24);
 
     // Caso especial para instrucciones B.Cond (comienzan con 0x54)
     if (opcode_high == 0x54) {
-        // Código para manejar B.Cond - Copiar aquí la lógica existente
         int flag_n = CURRENT_STATE.FLAG_N;
         int flag_z = CURRENT_STATE.FLAG_Z;
         uint8_t cond = instruction & 0xF;
@@ -89,22 +90,20 @@ void process_instruction()
                 break;
             }
 
-            case 0x758: {  // SUBS Register
-                uint32_t Rd = instruction & 0x1F; 
-                uint32_t Rn = (instruction >> 5) & 0x1F;  
-                uint32_t Rm = (instruction >> 16) & 0x1F;   
-            
-                // Manejar el registro XZR (X31)
+            case 0x758: {  // SUBS Register (también implementa CMP Register cuando Rd=31/XZR)
+                uint32_t Rd = instruction & 0x1F;
+                uint32_t Rn = (instruction >> 5) & 0x1F;
+                uint32_t Rm = (instruction >> 16) & 0x1F;
+                
                 int64_t reg_Xn = (Rn == 31) ? 0 : CURRENT_STATE.REGS[Rn];
                 int64_t reg_Xm = (Rm == 31) ? 0 : CURRENT_STATE.REGS[Rm];
                 int64_t result = reg_Xn - reg_Xm;
-            
-                // Actualizar registro destino
+                
                 NEXT_STATE.REGS[Rd] = (Rd == 31) ? 0 : result;
-            
+                
                 // Actualizar FLAGS
-                NEXT_STATE.FLAG_Z = (result == 0) ? 1 : 0;  // Z se activa si resultado es 0
-                NEXT_STATE.FLAG_N = (result < 0) ? 1 : 0;  // N se activa si resultado es negativo
+                NEXT_STATE.FLAG_Z = (result == 0) ? 1 : 0;
+                NEXT_STATE.FLAG_N = (result < 0) ? 1 : 0;
                 break;
             }
             
@@ -124,17 +123,23 @@ void process_instruction()
                 break;
             }
 
-            case 0x788: {  // SUBS Immediate
+            case 0x788: {  // SUBS Immediate (también implementa CMP Immediate cuando Rd=31/XZR)
                 uint32_t Rd = instruction & 0x1F;
                 uint32_t Rn = (instruction >> 5) & 0x1F;
                 uint32_t imm12 = (instruction >> 10) & 0xFFF;
-
+                uint32_t shift = (instruction >> 22) & 0x3;
+                
+                // Aplicar shift si es necesario (01 = LSL #12)
+                if (shift == 1) {
+                    imm12 <<= 12;
+                }
+                
                 int64_t reg_Xn = (Rn == 31) ? 0 : CURRENT_STATE.REGS[Rn];
-                int64_t imm = imm12; 
-                int64_t result = reg_Xn - imm;
-
+                int64_t result = reg_Xn - imm12;
+                
                 NEXT_STATE.REGS[Rd] = (Rd == 31) ? 0 : result;
-
+                
+                // Actualizar FLAGS
                 NEXT_STATE.FLAG_Z = (result == 0) ? 1 : 0;
                 NEXT_STATE.FLAG_N = (result < 0) ? 1 : 0;
                 break;
@@ -194,6 +199,22 @@ void process_instruction()
                 NEXT_STATE.PC = CURRENT_STATE.REGS[Rn];
                 break;
             }
+            case 0x694: {  // MOVZ
+                uint32_t Rd = instruction & 0x1F;
+                uint32_t imm16 = (instruction >> 5) & 0xFFFF;  // Extraer immediate de 16 bits
+                uint32_t hw = (instruction >> 21) & 0x3;  // Extraer hw (shift amount)
+                
+                // De acuerdo a la consigna, solo implementamos para hw = 0
+                int64_t result = imm16;
+                
+                // Si hw no es 0, mostramos una advertencia pero continuamos con hw = 0
+                if (hw != 0) {
+                    printf("MOVZ: Advertencia - hw != 0 no implementado, usando hw = 0\n");
+                }
+                
+                NEXT_STATE.REGS[Rd] = (Rd == 31) ? 0 : result;
+                break;
+            }
             default:
                 printf("Instrucción desconocida: %x\n", opcode);
                 break;
@@ -201,7 +222,7 @@ void process_instruction()
     }
 
     // Actualiza el PC para instrucciones que no sean saltos explícitos
-    if (opcode != 0x0A0 && opcode != 0x6B0) {
+    if (opcode != 0x0A0 && opcode != 0x6B0 && opcode_high != 0x54) {
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
     }
 }
