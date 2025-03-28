@@ -207,7 +207,7 @@ void process_instruction()
                 // De acuerdo a la consigna, solo implementamos para hw = 0
                 int64_t result = imm16;
                 
-                // Si hw no es 0, mostramos una advertencia pero continuamos con hw = 0
+                // Si hw no es 0,  mostramos una advertencia pero continuamos con hw = 0
                 if (hw != 0) {
                     printf("MOVZ: Advertencia - hw != 0 no implementado, usando hw = 0\n");
                 }
@@ -215,6 +215,132 @@ void process_instruction()
                 NEXT_STATE.REGS[Rd] = (Rd == 31) ? 0 : result;
                 break;
             }
+
+            case 0x69B: {  // LSL (Immediate), e.g., lsl X4, X3, 4
+                    uint32_t Rd = instruction & 0x1F;            
+                    uint32_t Rn = (instruction >> 5) & 0x1F;      
+                    uint32_t immr = (instruction >> 10) & 0x3F;  
+
+                    uint64_t shift = 63 - immr; 
+                    uint64_t src = CURRENT_STATE.REGS[Rn];
+                    uint64_t result = src << shift;
+                    NEXT_STATE.REGS[Rd] = result;
+                    printf("LSL: X%u = 0x%" PRIX64 " << %" PRIu64 " -> X%u = 0x%" PRIX64 "\n", Rn, src, shift, Rd, result);
+
+                    NEXT_STATE.FLAG_Z = (NEXT_STATE.REGS[Rd] == 0) ? 1 : 0;
+                    NEXT_STATE.FLAG_N = (NEXT_STATE.REGS[Rd] < 0) ? 1 : 0;
+
+
+                    break;
+                }
+
+            case 0x69A:// LSR
+                {   
+                        uint32_t Rd = instruction & 0x1F;              
+                        uint32_t Rn = (instruction >> 5) & 0x1F;       
+                        uint32_t immr = (instruction >> 16) & 0x3F;  // imms
+
+                        uint64_t shift = immr; 
+                        uint64_t src = CURRENT_STATE.REGS[Rn];
+                        uint64_t result = src >> shift;
+                        NEXT_STATE.REGS[Rd] = result;
+                        printf("LSR: X%u = 0x%" PRIX64 " >> %" PRIu64 " -> X%u = 0x%" PRIX64 "\n", Rn, src, shift, Rd, result);
+
+                        NEXT_STATE.FLAG_Z = (NEXT_STATE.REGS[Rd] == 0) ? 1 : 0;
+                        NEXT_STATE.FLAG_N = (NEXT_STATE.REGS[Rd] < 0) ? 1 : 0;
+
+
+                        break;
+                }
+            case 0x7c0: // STUR 
+            {
+                uint32_t Rd = instruction & 0x1F;              
+                uint32_t Rn = (instruction >> 5) & 0x1F;  
+                int32_t imm9 = (instruction >> 12) & 0x1FF;     
+
+                if (imm9 & 0x100) { 
+                    imm9 |= 0xFFFFFE00; 
+                } 
+               
+                uint32_t address = CURRENT_STATE.REGS[Rn] + imm9;     
+                mem_write_32(address, CURRENT_STATE.REGS[Rd]); 
+            }
+            break;
+            case 0x1c0: // STURB 
+                {
+                    uint32_t Rd = instruction & 0x1F;              
+                    uint32_t Rn = (instruction >> 5) & 0x1F;  
+                    int32_t imm9 = (instruction >> 12) & 0x1FF;
+                    if (imm9 & 0x100){ 
+                        imm9 |= 0xFFFFFE00; 
+                    }
+
+                uint32_t address = CURRENT_STATE.REGS[Rn] + imm9;
+                uint32_t value = mem_read_32(address);
+                value = (value & 0xFFFFFF00) | (CURRENT_STATE.REGS[Rd] & 0xFF);
+                mem_write_32(address, value);
+                }
+                break;
+            case 0x3E1: // STURH 
+                {
+                    uint32_t Rd = instruction & 0x1F;              
+                    uint32_t Rn = (instruction >> 5) & 0x1F;  
+                    int32_t imm9 = (instruction >> 12) & 0x1FF;
+                    if (imm9 & 0x100) { 
+                        imm9 |= 0xFFFFFE00; 
+                    }
+
+                    uint32_t address = CURRENT_STATE.REGS[Rn] + imm9;
+                    uint32_t value = mem_read_32(address);
+                    value = (value & 0xFFFF0000) | (CURRENT_STATE.REGS[Rd] & 0xFFFF);
+                    mem_write_32(address, value);
+                }
+                break;
+            case 0x7c2: // LDUR 
+                {
+                    uint32_t Rd = instruction & 0x1F;              
+                    uint32_t Rn = (instruction >> 5) & 0x1F;  
+                    int32_t imm9 = (instruction >> 12) & 0x1FF;
+                    if (imm9 & 0x100) { 
+                        imm9 |= 0xFFFFFE00; 
+                    }
+
+                    uint32_t address = CURRENT_STATE.REGS[Rn] + imm9;
+                    uint32_t half_value_1 = mem_read_32(address);
+                    uint32_t half_value_2 = mem_read_32(address + 4); 
+                    uint64_t value = ((uint64_t)half_value_2 << 32) | half_value_1;
+                    NEXT_STATE.REGS[Rd] = value;
+                }
+                break;
+            case 0x1c2: // LDURB 
+                {
+                    uint32_t Rd = instruction & 0x1F;              
+                    uint32_t Rn = (instruction >> 5) & 0x1F;  
+                    int32_t imm9 = (instruction >> 12) & 0x1FF;
+                    uint64_t address = CURRENT_STATE.REGS[Rn] + imm9;
+                    uint32_t byte_value = mem_read_32(address);
+                    uint64_t value = (uint64_t)((int32_t)byte_value);
+                    NEXT_STATE.REGS[Rd] = value;
+                }
+                break;
+            case 0x3c2: // LDURH 
+                {
+                    uint32_t Rd = instruction & 0x1F;              
+                    uint32_t Rn = (instruction >> 5) & 0x1F;  
+                    int32_t imm9 = (instruction >> 12) & 0x1FF;
+                    uint64_t address = CURRENT_STATE.REGS[Rn] + imm9;
+                    uint32_t half_value = mem_read_32(address);
+                    uint64_t value = (uint64_t)((int32_t)half_value);
+                    NEXT_STATE.REGS[Rd] = value;
+                }
+                break;
+
+
+
+
+
+
+
             default:
                 printf("Instrucción desconocida: %x\n", opcode);
                 break;
